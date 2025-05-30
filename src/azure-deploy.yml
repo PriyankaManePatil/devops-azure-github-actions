@@ -1,4 +1,4 @@
-name: Azure Deploy
+name: Azure Deploy (Reference Only)
 
 on:
   push:
@@ -10,17 +10,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Login to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure (Simulation)
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Deploy Azure Bicep Template
-      run: |
-        az deployment group create \
-          --resource-group YOUR_RESOURCE_GROUP_NAME \
-          --template-file ./infra/main.bicep
-
+      - name: Simulated Deployment
+        run: |
+          echo "This is a simulated deployment step"
+          echo "az deployment group create --resource-group demo-group --template-file ./infra/main.bicep"
