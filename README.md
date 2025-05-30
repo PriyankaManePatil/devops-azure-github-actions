@@ -26,7 +26,7 @@ This is a **reference-only architecture project** demonstrating how to set up a 
 
 ## 🖼 Architecture Diagram
 
-![CI/CD Flow](docs/ci-cd-architecture-diagram.png)
+![CI/CD Flow](docs/github-actions-azure-cicd-flow.png)
 
 ---
 
