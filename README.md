@@ -1,43 +1,45 @@
-# DevOps Workflow with GitHub Actions + Azure Deployment (Reference Project)
-![Reference Only](https://img.shields.io/badge/Project-Reference%20Only-lightgrey?style=flat-square&color=blue)
+# Azure DevOps with GitHub Actions and Bicep
 
-This is a **reference-only architecture project** demonstrating how to set up a CI/CD workflow using **GitHub Actions** to deploy Azure resources like Bicep templates or infrastructure code.
+Education-first reference for secure Azure infrastructure CI/CD using GitHub Actions, Bicep, OIDC, Azure What-If, and environment-aware deployment.
 
----
+## Safety and purpose
 
-## 📁 Project Structure
+This repository is for learning, interviews, and architecture discussions. It does not create credentials, subscriptions, resource groups, approvals, or live resources automatically. Azure operations are guarded by the repository variable `ENABLE_AZURE_DEPLOYMENT=true`; otherwise the deployment workflow only displays guidance.
 
----
+It demonstrates credential-free Bicep validation, environment parameter files, manual What-If/deploy selection, passwordless OIDC authentication, GitHub Environments, and secure Azure Storage defaults.
 
-## 🔧 CI/CD Workflow Overview
+## Structure
 
-- Code push to `main` branch triggers a GitHub Actions workflow
-- Simulated login to Azure using GitHub Secrets
-- Simulated deployment via `echo` command (no real secrets or SPN used)
+```text
+.github/workflows/     Validation and guarded deployment
+infra/                 Template and dev/test/prod parameters
+scripts/deploy.ps1     Local validation, What-If, deployment
+docs/                  Architecture and learning notes
+```
 
----
+## Optional live-lab configuration
 
-## 🧠 Purpose
+Create an Entra application or user-assigned identity, a federated credential trusting this repository/environment, a least-privilege role assignment, pre-created resource groups, and GitHub Environments named `dev`, `test`, and `prod`.
 
-✅ Showcase your DevOps + Azure expertise  
-✅ Explain architecture concepts in interviews  
-✅ Use this as a template for future real-world projects
+| Variable | Purpose |
+|---|---|
+| `ENABLE_AZURE_DEPLOYMENT` | Explicit opt-in; must equal `true` |
+| `AZURE_CLIENT_ID` | Entra identity client ID |
+| `AZURE_TENANT_ID` | Tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Target subscription |
+| `AZURE_RESOURCE_GROUP_DEV/TEST/PROD` | Environment resource groups |
 
----
+Do not commit secrets or credential JSON. Add required reviewers to the `prod` Environment when studying approvals.
 
-## 🖼 Architecture Diagram
+## Local examples
 
-![CI/CD Flow](docs/github-actions-azure-cicd-flow.png)
+```powershell
+./scripts/deploy.ps1 -Environment dev -Mode Validate
+./scripts/deploy.ps1 -Environment dev -Mode WhatIf -ResourceGroupName "<resource-group>"
+./scripts/deploy.ps1 -Environment dev -Mode Deploy -ResourceGroupName "<resource-group>"
+```
 
----
+The template declares a uniquely named StorageV2 account with HTTPS, TLS 1.2, public Blob access disabled, shared-key authorization disabled, OAuth by default, infrastructure encryption, tags, and outputs. Real workloads should additionally assess private networking, diagnostics, Policy, Defender, retention, cost, and disaster recovery.
 
-## 📜 License
-
-This project is licensed under the **MIT License**.
-
----
-
-## 💡 Note
-
-> This is a **simulated project** meant for demonstration, learning, and architectural discussions. It does **not** include real credentials or live deployments.
+Read [the architecture](docs/architecture.md) and [learning guide](docs/learning-guide.md). Licensed under MIT.
 

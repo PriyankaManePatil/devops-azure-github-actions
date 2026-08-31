@@ -1,0 +1,81 @@
+name: Azure deployment reference
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        default: dev
+        type: choice
+        options: [dev, test, prod]
+      operation:
+        required: true
+        default: what-if
+        type: choice
+        options: [what-if, deploy]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: azure-infrastructure-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  disabled:
+    if: ${{ vars.ENABLE_AZURE_DEPLOYMENT != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Azure deployment is intentionally disabled. See README." >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    if: ${{ vars.ENABLE_AZURE_DEPLOYMENT == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.environment }}
+    env:
+      PARAMETER_FILE: infra/parameters/${{ inputs.environment }}.bicepparam
+      DEPLOYMENT_NAME: github-${{ inputs.environment }}-${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve resource group
+        id: target
+        env:
+          ENVIRONMENT_NAME: ${{ inputs.environment }}
+          RG_DEV: ${{ vars.AZURE_RESOURCE_GROUP_DEV }}
+          RG_TEST: ${{ vars.AZURE_RESOURCE_GROUP_TEST }}
+          RG_PROD: ${{ vars.AZURE_RESOURCE_GROUP_PROD }}
+        run: |
+          case "$ENVIRONMENT_NAME" in
+            dev) rg="$RG_DEV" ;;
+            test) rg="$RG_TEST" ;;
+            prod) rg="$RG_PROD" ;;
+            *) exit 1 ;;
+          esac
+          [[ -n "$rg" ]] || exit 1
+          echo "resource_group=$rg" >> "$GITHUB_OUTPUT"
+      - name: Login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify resource group
+        env:
+          RG: ${{ steps.target.outputs.resource_group }}
+        run: az group show --name "$RG" --output none
+      - name: Validate
+        env:
+          RG: ${{ steps.target.outputs.resource_group }}
+        run: az deployment group validate --name "$DEPLOYMENT_NAME-validation" --resource-group "$RG" --parameters "$PARAMETER_FILE"
+      - name: What-If
+        env:
+          RG: ${{ steps.target.outputs.resource_group }}
+        run: az deployment group what-if --name "$DEPLOYMENT_NAME" --resource-group "$RG" --parameters "$PARAMETER_FILE" --result-format FullResourcePayloads
+      - name: Deploy
+        if: ${{ inputs.operation == 'deploy' }}
+        env:
+          RG: ${{ steps.target.outputs.resource_group }}
+        run: az deployment group create --name "$DEPLOYMENT_NAME" --resource-group "$RG" --parameters "$PARAMETER_FILE" --output table
+
