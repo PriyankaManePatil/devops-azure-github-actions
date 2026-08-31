@@ -43,7 +43,7 @@ jobs:
       PARAMETER_FILE: infra/parameters/${{ inputs.environment }}.bicepparam
       DEPLOYMENT_NAME: github-${{ inputs.environment }}-${{ github.run_number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Resolve resource group
         id: target
         env:

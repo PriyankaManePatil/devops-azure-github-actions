@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 10
     steps:
       # Download the exact commit being validated.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Ubuntu runners contain Azure CLI; update its Bicep component.
       - run: az bicep upgrade
       - name: Lint and compile
