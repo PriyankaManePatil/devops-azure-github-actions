@@ -1,5 +1,6 @@
 name: Bicep validation
 
+# Safe automatic validation: this workflow never authenticates to Azure.
 on:
   pull_request:
     branches: [main]
@@ -10,9 +11,11 @@ on:
   workflow_dispatch:
 
 permissions:
+  # Least privilege: validation only reads repository files.
   contents: read
 
 concurrency:
+  # Replace an older run when a newer commit arrives on the same ref.
   group: bicep-validation-${{ github.ref }}
   cancel-in-progress: true
 
@@ -21,7 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # Download the exact commit being validated.
       - uses: actions/checkout@v4
+      # Ubuntu runners contain Azure CLI; update its Bicep component.
       - run: az bicep upgrade
       - name: Lint and compile
         run: |
@@ -30,11 +35,12 @@ jobs:
       - name: Compile parameters
         shell: bash
         run: |
+          # Fail on command errors, undefined variables, and pipeline failures.
           set -euo pipefail
+          # Produce an empty array instead of an unmatched wildcard.
           shopt -s nullglob
           files=(infra/parameters/*.bicepparam)
           (( ${#files[@]} > 0 )) || exit 1
           for file in "${files[@]}"; do
             az bicep build-params --file "${file}" --stdout > /dev/null
           done
-
