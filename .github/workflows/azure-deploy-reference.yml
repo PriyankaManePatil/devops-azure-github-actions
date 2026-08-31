@@ -1,5 +1,6 @@
 name: Azure deployment reference
 
+# Manual by design: the learner chooses both environment and operation.
 on:
   workflow_dispatch:
     inputs:
@@ -15,14 +16,17 @@ on:
         options: [what-if, deploy]
 
 permissions:
+  # Read source and request a short-lived OIDC token; no repository write access.
   contents: read
   id-token: write
 
 concurrency:
+  # Prevent overlapping infrastructure operations in one environment.
   group: azure-infrastructure-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:
+  # Explain why nothing ran when live Azure use has not been explicitly enabled.
   disabled:
     if: ${{ vars.ENABLE_AZURE_DEPLOYMENT != 'true' }}
     runs-on: ubuntu-latest
@@ -30,6 +34,7 @@ jobs:
       - run: echo "Azure deployment is intentionally disabled. See README." >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
+    # First safety gate: an owner must deliberately enable Azure operations.
     if: ${{ vars.ENABLE_AZURE_DEPLOYMENT == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -47,6 +52,7 @@ jobs:
           RG_TEST: ${{ vars.AZURE_RESOURCE_GROUP_TEST }}
           RG_PROD: ${{ vars.AZURE_RESOURCE_GROUP_PROD }}
         run: |
+          # Map the selected environment to separately configured repository variables.
           case "$ENVIRONMENT_NAME" in
             dev) rg="$RG_DEV" ;;
             test) rg="$RG_TEST" ;;
@@ -56,6 +62,7 @@ jobs:
           [[ -n "$rg" ]] || exit 1
           echo "resource_group=$rg" >> "$GITHUB_OUTPUT"
       - name: Login with OIDC
+        # Exchanges GitHub's short-lived token for Azure access; no client secret.
         uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -66,16 +73,18 @@ jobs:
           RG: ${{ steps.target.outputs.resource_group }}
         run: az group show --name "$RG" --output none
       - name: Validate
+        # Server-side validation checks the template against the selected Azure scope.
         env:
           RG: ${{ steps.target.outputs.resource_group }}
         run: az deployment group validate --name "$DEPLOYMENT_NAME-validation" --resource-group "$RG" --parameters "$PARAMETER_FILE"
       - name: What-If
+        # Always preview additions, changes, and deletions before any deployment.
         env:
           RG: ${{ steps.target.outputs.resource_group }}
         run: az deployment group what-if --name "$DEPLOYMENT_NAME" --resource-group "$RG" --parameters "$PARAMETER_FILE" --result-format FullResourcePayloads
       - name: Deploy
+        # Second safety gate: apply only when the user explicitly selected deploy.
         if: ${{ inputs.operation == 'deploy' }}
         env:
           RG: ${{ steps.target.outputs.resource_group }}
         run: az deployment group create --name "$DEPLOYMENT_NAME" --resource-group "$RG" --parameters "$PARAMETER_FILE" --output table
-

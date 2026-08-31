@@ -1,7 +1,7 @@
+# Check referenced GitHub Actions monthly for supported/security updates.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-
