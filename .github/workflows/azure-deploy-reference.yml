@@ -63,7 +63,7 @@ jobs:
           echo "resource_group=$rg" >> "$GITHUB_OUTPUT"
       - name: Login with OIDC
         # Exchanges GitHub's short-lived token for Azure access; no client secret.
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
